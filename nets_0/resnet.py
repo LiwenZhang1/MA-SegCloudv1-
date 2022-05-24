@@ -1,14 +1,8 @@
 from __future__ import print_function
 from keras import backend
 import keras.backend as K
-import numpy as np
 from keras import layers
-from keras.applications.imagenet_utils import (decode_predictions,
-                                               preprocess_input)
 from keras.layers import *
-from keras.models import Model
-from keras.preprocessing import image
-from keras.utils.data_utils import get_file
 
 
 def _activation(x, name='relu'):
@@ -21,17 +15,12 @@ def hard_swish(x):
     return Multiply()([Activation(hard_sigmoid)(x), x])
 def hard_sigmoid(x):
     return backend.relu(x + 3.0, max_value=6.0) / 6.0
-#################   cbam注意力机制   ###############
-def cbam_block(cbam_feature, ratio=8):
-    """Contains the implementation of Convolutional Block Attention Module(CBAM) block.
-    As described in https://arxiv.org/abs/1807.06521.
-    """
 
+def cbam_block(cbam_feature, ratio=8):
     cbam_feature = channel_attention(cbam_feature, ratio)
     cbam_feature = spatial_attention(cbam_feature)
     return cbam_feature
 
-##############  空间注意力  #################
 def channel_attention(input_feature, ratio=8):
     channel_axis = 1 if K.image_data_format() == "channels_first" else -1
     channel = input_feature._keras_shape[channel_axis]
@@ -70,7 +59,6 @@ def channel_attention(input_feature, ratio=8):
 
     return multiply([input_feature, cbam_feature])
 
-###################  通道注意力  #####################
 def spatial_attention(input_feature):
     kernel_size = 7
 
@@ -106,23 +94,14 @@ def identity_block(input_tensor, kernel_size, filters, stage, block, activation,
     conv_name_base = 'res' + str(stage) + block + '_branch'
     bn_name_base = 'bn' + str(stage) + block + '_branch'
 
-    # -------------------------------#
-    #   利用1x1卷积进行通道数的下降
-    # -------------------------------#
     x = Conv2D(filters1, (1, 1), padding='same', name=conv_name_base + '2a')(input_tensor)
     x = BatchNormalization(name=bn_name_base + '2a')(x)
     x = _activation(x, activation)
 
-    # -------------------------------#
-    #   利用3x3卷积进行特征提取
-    # -------------------------------#
     x = Conv2D(filters2, kernel_size, padding='same', dilation_rate=dilation_rate, name=conv_name_base + '2b')(x)
     x = BatchNormalization(name=bn_name_base + '2b')(x)
     x = _activation(x, activation)
 
-    # -------------------------------#
-    #   利用1x1卷积进行通道数的上升
-    # -------------------------------#
     x = Conv2D(filters3, (1, 1), padding='same', name=conv_name_base + '2c')(x)
     x = BatchNormalization(name=bn_name_base + '2c')(x)
     if se:
@@ -137,30 +116,17 @@ def conv_block(input_tensor, kernel_size, filters, stage, block, activation, dil
     conv_name_base = 'res' + str(stage) + block + '_branch'
     bn_name_base = 'bn' + str(stage) + block + '_branch'
 
-    # -------------------------------#
-    #   利用1x1卷积进行通道数的下降
-    # -------------------------------#
     x = Conv2D(filters1, (1, 1), padding='same', strides=strides, name=conv_name_base + '2a')(input_tensor)
     x = BatchNormalization(name=bn_name_base + '2a')(x)
     x = _activation(x, activation)
 
-    # -------------------------------#
-    #   利用3x3卷积进行特征提取
-    # -------------------------------#
     x = Conv2D(filters2, kernel_size, padding='same', dilation_rate=dilation_rate, name=conv_name_base + '2b')(x)
     x = BatchNormalization(name=bn_name_base + '2b')(x)
     x = Activation('relu')(x)
 
-    # -------------------------------#
-    #   利用1x1卷积进行通道数的上升
-    # -------------------------------#
     x = Conv2D(filters3, (1, 1), padding='same', name=conv_name_base + '2c')(x)
     x = BatchNormalization(name=bn_name_base + '2c')(x)
 
-    # -------------------------------#
-    #   将残差边也进行调整
-    #   才可以进行连接
-    # -------------------------------#
     shortcut = Conv2D(filters3, (1, 1), padding='same', strides=strides, name=conv_name_base + '1')(input_tensor)
     shortcut = BatchNormalization(name=bn_name_base + '1')(shortcut)
 
@@ -170,7 +136,6 @@ def conv_block(input_tensor, kernel_size, filters, stage, block, activation, dil
 
 
 def ResNet50(img_input):
-    # img_input = Input(shape=input_shape)
     x = ZeroPadding2D((3, 3))(img_input)
 
     # 320,320,3 -> 160,160,64
@@ -182,40 +147,27 @@ def ResNet50(img_input):
     x = Conv2D(64, (3, 3), strides=(2, 2), name='conv2')(x)
     x = BatchNormalization(name='bn_conv2')(x)
     x = Activation('relu')(x)
-    print("输入resnet特征图大小：", K.int_shape(x))
     skip1 = x
 
     # 80,80,64 -> 80,80,128
     x = conv_block(x, 3, [64, 64, 128], stage=2, block='a', activation='relu', dilation_rate=(1, 1), strides=(1, 1))
-    print("stage1 convblock：", K.int_shape(x))
     x = identity_block(x, 3, [64, 64, 128], stage=2, block='b', activation='relu', dilation_rate=(2, 2), se=False)
-    print("stage1 identityblock1：", K.int_shape(x))
     x = identity_block(x, 3, [64, 64, 128], stage=2, block='c', activation='relu', dilation_rate=(4, 4), se=True)
-    print("stage1 identityblock2：", K.int_shape(x))
     x = identity_block(x, 3, [64, 64, 128], stage=2, block='d', activation='hardswish', dilation_rate=(1, 1), se=True)
-    print("stage1 identityblock3：", K.int_shape(x))
     feat1 = x
 
     # 80,80,128 -> 40,40,256
     x = conv_block(x, 3, [128, 128, 256], stage=3, block='a', activation='hardswish', dilation_rate=(2, 2), strides=(2, 2))
-    print("stage2 convblock：", K.int_shape(x))
     x = identity_block(x, 3, [128, 128, 256], stage=3, block='b', activation='hardswish', dilation_rate=(4, 4), se=False)
-    print("stage2 identityblock1：", K.int_shape(x))
     x = identity_block(x, 3, [128, 128, 256], stage=3, block='c', activation='hardswish', dilation_rate=(1, 1), se=True)
-    print("stage2 identityblock2：", K.int_shape(x))
     x = identity_block(x, 3, [128, 128, 256], stage=3, block='d', activation='hardswish', dilation_rate=(2, 2), se=True)
-    print("stage2 identityblock3：", K.int_shape(x))
     feat2 = x
 
     # 40,40,256 -> 20,20,512
     x = conv_block(x, 3, [256, 256, 512], stage=4, block='a', activation='hardswish', dilation_rate=(4, 4), strides=(2, 2))
-    print("stage3 convblock：", K.int_shape(x))
     x = identity_block(x, 3, [256, 256, 512], stage=4, block='b', activation='hardswish', dilation_rate=(1, 1), se=True)
-    print("stage3 identityblock1：", K.int_shape(x))
     x = identity_block(x, 3, [256, 256, 512], stage=4, block='c', activation='hardswish', dilation_rate=(2, 2), se=True)
-    print("stage3 identityblock2：", K.int_shape(x))
     x = identity_block(x, 3, [256, 256, 512], stage=4, block='d', activation='hardswish', dilation_rate=(4, 4), se=True)
-    print("stage3 identityblock3：", K.int_shape(x))
     feat3 = x
 
     return skip1, feat1, feat2, feat3

@@ -32,7 +32,7 @@ tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(config=config))
 # session = tf.Session(config=config)
 
 # 修改后的网络
-from nets_0.deeplab import Deeplabv3
+from nets_0.deeplab import MASegCloud
 
 
 def rand(a=0, b=1):
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     NCLASSES = 2
 
     log_dir = r"N:\zhang\deep3\logs/"
-    model = Deeplabv3(classes=NCLASSES, input_shape=(HEIGHT, WIDTH, 3))
+    model = MASegCloud(classes=NCLASSES, input_shape=(HEIGHT, WIDTH, 3))
 
 
     weights_path = "N:\zhang\deep3\logs\ep072-loss0.036-val_loss0.092.h5"
@@ -152,11 +152,11 @@ if __name__ == "__main__":
 
 
     if True:
-        lr = 1e-4
-        batch_size = 1
+        lr = 1e-3
+        batch_size = 8
         model.compile(loss='binary_crossentropy',
-                      optimizer=SGD(lr=lr),
-                      metrics=['accuracy', f_score()])
+                      optimizer=Adam(lr=lr),
+                      metrics=['accuracy'])
 
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(len(train_lines), len(val_lines), batch_size))
 
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                 steps_per_epoch=max(1, len(train_lines)//batch_size),
                 validation_data=gen_val,
                 validation_steps=max(1, len(val_lines)//batch_size),
-                epochs=3000,
+                epochs=300,
                 initial_epoch=0,
                 callbacks=[checkpoint, tensorboard, early_stopping])     #改 callbacks=[checkpoint, reduce_lr, tensorboard])
         model.save_weights(log_dir+'last1.h5')
