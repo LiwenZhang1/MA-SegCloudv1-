@@ -123,13 +123,6 @@ if __name__ == "__main__":
     weights_path = "N:\zhang\deep3\logs\ep072-loss0.036-val_loss0.092.h5"
     model.load_weights(weights_path,by_name=True,skip_mismatch=True)
 
-    #------------------------------#
-    #   是否使用辅助分支
-    #   会占用大量显存
-    #------------------------------#
-    aux_branch = False
-
-
     # 打开训练集的txt
     with open(r"N:\zhang\deep3\dataset2\datasets\all\train.txt","r") as f:
         train_lines = f.readlines()
