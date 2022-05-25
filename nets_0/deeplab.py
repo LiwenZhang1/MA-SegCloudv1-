@@ -196,7 +196,7 @@ def conv2d_bn(x,filters,num_row,num_col,padding='same',stride=1,dilation_rate=1,
         x = Activation("relu")(x)
     return x
 
-def BasicRFB(x, input_filters, output_filters, stride=1, map_reduce=8, name=1):
+def MACM(x, input_filters, output_filters, stride=1, map_reduce=8, name=1):
     # -------------------------------------------------------#
     #   BasicRFB模块是一个残差结构
     #   主干部分使用不同膨胀率的卷积进行特征提取
@@ -242,11 +242,11 @@ def MASegCloud(input_shape=(320, 320, 3), classes=2, alpha=1):
     img_input = Input(shape=input_shape)
     skip1, feat1, feat2, feat3 = ResNet50(img_input) #, alpha)
 
-    P3 = BasicRFB(feat3, 512, 512, stride=1, name=1)
+    P3 = MACM(feat3, 512, 512, stride=1, name=1)
     P3_Up = UpSampling2D(size=(2, 2), name="p3upsampled")(P3)
 
-    P2 = BasicRFB(feat2, 256, 256, stride=1,  name=2)
-    P1 = BasicRFB(feat1, 128, 128, stride=1,  name=3)
+    P2 = MACM(feat2, 256, 256, stride=1,  name=2)
+    P1 = MACM(feat1, 128, 128, stride=1,  name=3)
     P2 = Concatenate()([P2, P3_Up])
 
     P2 = cov_rate(P2, 256, 3, dilation_rate=(1, 1), name='re_chane_1', activation='hardswish', se=True)
