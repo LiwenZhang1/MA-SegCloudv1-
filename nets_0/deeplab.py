@@ -4,8 +4,6 @@ from functools import reduce
 
 
 from keras.models import Model
-from nets.mobilenetV2 import (BasicRFB, _inverted_res_block, squeeze)
-from nets.mobilenetV3 import MobileNetV3
 from nets_0.resnet import ResNet50
 from keras.layers import *
 from keras import backend
@@ -25,7 +23,6 @@ def cbam_block(cbam_feature, ratio=8):
     cbam_feature = spatial_attention(cbam_feature)
     return cbam_feature
 
-##############  空间注意力  #################
 def channel_attention(input_feature, ratio=8):
     channel_axis = 1 if K.image_data_format() == "channels_first" else -1
     channel = input_feature._keras_shape[channel_axis]
@@ -64,7 +61,6 @@ def channel_attention(input_feature, ratio=8):
 
     return multiply([input_feature, cbam_feature])
 
-###################  通道注意力  #####################
 def spatial_attention(input_feature):
     kernel_size = 7
 
@@ -101,21 +97,9 @@ def compose(*funcs):
     else:
         raise ValueError('Composition of empty sequence not supported.')
 
-@wraps(Conv2D)
-def DarknetConv2D(*args, **kwargs):
-    darknet_conv_kwargs = {}
-    darknet_conv_kwargs['padding'] = 'valid' if kwargs.get('strides')==(2,2) else 'same'
-    darknet_conv_kwargs.update(kwargs)
-    return Conv2D(*args, **darknet_conv_kwargs)
-
 def relu6(x):
     return K.relu(x, max_value=6)
 
-
-# ---------------------------------------------------#
-#   深度可分离卷积块
-#   DepthwiseConv2D + BatchNormalization + Relu6
-# ---------------------------------------------------#
 def _depthwise_conv_block(inputs, pointwise_conv_filters, alpha=1,
                           depth_multiplier=1, strides=(1, 1), block_id=1):
     pointwise_conv_filters = int(pointwise_conv_filters * alpha)
@@ -135,7 +119,6 @@ def _depthwise_conv_block(inputs, pointwise_conv_filters, alpha=1,
                strides=(1, 1))(x)
     x = BatchNormalization()(x)
     return Activation(relu6)(x)
-
 
 
 def SepConv_BN(x, filters, prefix, stride=1, kernel_size=3, rate=1, depth_activation=False, epsilon=1e-3):
@@ -170,6 +153,8 @@ def _activation(x, name='relu'):
         return Activation('relu')(x)
     elif name == 'hardswish':
         return hard_swish(x)
+    
+    
 def hard_swish(x):
     return Multiply()([Activation(hard_sigmoid)(x), x])
 
@@ -197,11 +182,6 @@ def conv2d_bn(x,filters,num_row,num_col,padding='same',stride=1,dilation_rate=1,
     return x
 
 def MACM(x, input_filters, output_filters, stride=1, map_reduce=8, name=1):
-    # -------------------------------------------------------#
-    #   BasicRFB模块是一个残差结构
-    #   主干部分使用不同膨胀率的卷积进行特征提取
-    #   残差边只包含一个调整宽高和通道的1x1卷积
-    # -------------------------------------------------------#
     input_filters_div = input_filters // map_reduce
 
     branch_0 = conv2d_bn(x, input_filters_div * 2, 1, 1, stride=stride)
@@ -223,16 +203,9 @@ def MACM(x, input_filters, output_filters, stride=1, map_reduce=8, name=1):
     branch_3 = conv2d_bn(branch_3, input_filters_div * 2, 7, 1, stride=stride)
     branch_3 = SepConv_BN(branch_3, input_filters_div * 2, 'RFB_3_1_%d'%name, rate=7, depth_activation=False, attention=True)
 
-    # -------------------------------------------------------#
-    #   将不同膨胀率的卷积结果进行堆叠
-    #   利用1x1卷积调整通道数
-    # -------------------------------------------------------#
     out = concatenate([branch_0, branch_1, branch_2, branch_3], axis=-1)
     out = conv2d_bn(out, output_filters, 1, 1, relu=False)
 
-    # -------------------------------------------------------#
-    #   残差边也需要卷积，才可以相加
-    # -------------------------------------------------------#
     short = conv2d_bn(x, output_filters, 1, 1, stride=stride, relu=False)
     out = Lambda(lambda x: x[0] + x[1])([out, short])
     out = Activation("relu")(out)
