@@ -140,6 +140,8 @@ def SepConv_BN(x, filters, prefix, stride=1, kernel_size=3, rate=1, depth_activa
     x = BatchNormalization(name=prefix + '_depthwise_BN', epsilon=epsilon)(x)
     if depth_activation:
         x = _activation(x, 'hardswish')
+    if attention:
+        x = squeeze(x)
 
     x = Conv2D(filters, (1, 1), padding='same', use_bias=False, name=prefix + '_pointwise')(x)
     x = BatchNormalization(name=prefix + '_pointwise_BN', epsilon=epsilon)(x)
