@@ -17,6 +17,19 @@ config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 K.set_session(sess)
 
+def squeeze(inputs):
+    input_channels = int(inputs.shape[-1])
+    x = GlobalAveragePooling2D()(inputs)
+
+    x = Dense(int(input_channels/4))(x)
+    x = Activation(relu6)(x)
+
+    x = Dense(input_channels)(x)
+    x = Activation(hard_swish)(x)
+
+    x = Reshape((1, 1, input_channels))(x)
+    x = Multiply()([inputs, x])
+    return x
 
 def cbam_block(cbam_feature, ratio=8):
     cbam_feature = channel_attention(cbam_feature, ratio)
