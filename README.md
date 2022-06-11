@@ -5,7 +5,9 @@
 
 2. Training: Set the path for train.py to read images and labels, and load training and validation sets.
 (a).Read image from file: img = Image.open(r"filepath" + '/' + name + ".jpg")
+
 (b).Read label image from file: label = Image.open(r"filepath" + '/' + name + ".png")
+
 (c).Set hyperparameters such as learning rate, optimizer, loss function, etc.
 
 3. prediction：Load the trained weight file, set the file path to save the prediction results, and run the predict.py.
