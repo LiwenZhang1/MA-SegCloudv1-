@@ -8,6 +8,6 @@
 (b).Read label image from file: label = Image.open(r"filepath" + '/' + name + ".png")
 (c).Set hyperparameters such as learning rate, optimizer, loss function, etc.
 
-3.prediction：Load the trained weight file, set the file path to save the prediction results, and run the predict.py.
+3. prediction：Load the trained weight file, set the file path to save the prediction results, and run the predict.py.
 
 4. test: Load predictions and labels, run test.py.
