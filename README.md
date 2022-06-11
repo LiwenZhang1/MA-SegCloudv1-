@@ -1,5 +1,7 @@
 # MA-SegCloudv1- A novel ground-based cloud image segmentation method based on a multibranch asymmetric convolution module and attention mechanism
-With the spirit of reproducible research, this repository contains all the codes required to produce the results in the manuscript:
+
+   With the spirit of reproducible research, this repository contains all the codes required to produce the results in the manuscript:
+
 ![image](https://github.com/LiwenZhang1/MA-SegCloudv1-/blob/master/Figure1.png)
 
 Please cite the above paper if you intend to use whole/part of the code. This code is only for academic and research purposes.
