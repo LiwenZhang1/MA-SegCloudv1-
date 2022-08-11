@@ -19,4 +19,4 @@ Please cite the above paper if you intend to use whole/part of the code. This co
 
 3. prediction：Load the trained weight file, set the file path to save the prediction results, and run the predict.py.
 
-4. test: Load predictions and labels, run test.py.
+4. test: Load predictions and labels, run eval.py.
